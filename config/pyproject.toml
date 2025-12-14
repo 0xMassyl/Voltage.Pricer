@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "voltage-pricer-engine"
+version = "2.0.0"
+description = "Industrial B2B Electricity Pricing & Risk Engine with XGBoost Forecasting"
+authors = ["Your Name"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pandas = "^2.1.0"
+numpy = "^1.26.0"
+scipy = "^1.11.0"
+streamlit = "^1.31.0"
+plotly = "^5.18.0"
+xlsxwriter = "^3.1.9"
+openpyxl = "^3.1.2"
+xgboost = "^2.0.3"
+scikit-learn = "^1.4.0"
+requests = "^2.31.0"
+beautifulsoup4 = "^4.12.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
