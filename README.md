@@ -69,46 +69,45 @@ The application is containerized and split into modular components:
 
 ```mermaid
 graph TD
-    subgraph "External World (Data Sources)"
-        ELIA[ELIA API (TSO)]
-        EEX[EEX Market Futures]
+    subgraph External_World
+        ELIA["ELIA API (TSO)"]
+        EEX["EEX Market Futures"]
     end
 
-    subgraph "Ingestion Layer"
-        Loader[Data Loader & Cleaning]
-        Generator[Curve Generator]
+    subgraph Ingestion_Layer
+        Loader["Data Loader & Cleaning"]
+        Generator["Curve Generator"]
     end
 
-    subgraph "Intelligence Layer (ML)"
-        XGB[XGBoost Regressor]
-        Feat[Feature Engineering]
+    subgraph Intelligence_Layer
+        XGB["XGBoost Regressor"]
+        Feat["Feature Engineering"]
     end
 
-    subgraph "Domain Layer (Core Logic)"
-        Pricing[Sourcing Engine]
-        Risk[Risk Engine]
-        PPA[PPA Valuation]
+    subgraph Domain_Layer
+        Pricing["Sourcing Engine"]
+        Risk["Risk Engine"]
+        PPA["PPA Valuation"]
     end
 
-    subgraph "Presentation Layer"
-        UI[Streamlit Dashboard]
-        Excel[Excel Reporting Engine]
+    subgraph Presentation_Layer
+        UI["Streamlit Dashboard"]
+        Excel["Excel Reporting Engine"]
     end
 
-    ELIA -->|Real Load/Spot Data| Loader
-    Loader -->|Normalized Data| Generator
-    Generator -->|Load Curve| Pricing
+    ELIA --> Loader
+    Loader --> Generator
+    Generator --> Pricing
 
-    EEX -->|Cal-26 Base/Peak| Pricing
-    Pricing -->|Historical Pattern| Feat
-    Feat -->|Time Features| XGB
-    XGB -->|HPFC (Hourly Curve)| Pricing
+    EEX --> Pricing
+    Pricing --> Feat
+    Feat --> XGB
+    XGB --> Pricing
 
-    Pricing -->|Commodity Cost| Risk
-    Pricing -->|HPFC| Risk
-    Risk -->|Profiling & Swing Cost| UI
+    Pricing --> Risk
+    Risk --> UI
+    UI --> Excel
 
-    UI -->|Final Quote| Excel
 
 ## 3. Quantitative Framework (The Math)
 
