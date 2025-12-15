@@ -2,25 +2,44 @@ import pandas as pd
 import numpy as np
 from src.core.settings import MarketSettings
 
+
 class RiskEngine:
     """
-    Handles risk premiums calculation for Electricity B2B contracts.
-    Focuses on Profiling Cost (Shape Risk) and Volume Uncertainty (Swing Risk).
+    Risk premium engine for B2B electricity contracts.
+
+    Covers two main sources of risk:
+    - Profiling Cost (Shape Risk): mismatch between client load profile and baseload prices
+    - Volume Risk (Swing Risk): uncertainty on actual consumption vs forecast
     """
 
     def __init__(self, settings: MarketSettings, spot_volatility: float):
-        self.settings = settings
-        self.spot_volatility = spot_volatility # Reference volatility from Market Data
+        """
+        settings:
+        Market configuration and conventions.
 
-    def calculate_profiling_cost(self, load_curve: pd.Series, hpfc: pd.Series) -> float:
+        spot_volatility:
+        Reference spot price volatility used to price volume optionality.
         """
-        Calculates the Profiling Cost (Shape Risk) in €/MWh.
-        
-        Definition: The difference between the Client's Weighted Average Price
-        and the Market Baseload Price.
-        
-        Formula: (Sum(Load * Price) / Sum(Load)) - Mean(Price)
+        self.settings = settings
+        self.spot_volatility = spot_volatility
+
+    # ------------------------------------------------------------------
+    # Profiling (Shape) risk
+    # ------------------------------------------------------------------
+    def calculate_profiling_cost(
+        self, load_curve: pd.Series, hpfc: pd.Series
+    ) -> float:
         """
+        Computes the profiling cost in €/MWh.
+
+        Definition:
+        Difference between the client's load-weighted price
+        and the simple market baseload price.
+
+        Formula:
+        (Sum(Load * Price) / Sum(Load)) - Mean(Price)
+        """
+        # Defensive checks
         if load_curve.empty or hpfc.empty:
             return 0.0
 
@@ -28,45 +47,51 @@ class RiskEngine:
         if total_volume == 0:
             return 0.0
 
-        # 1. Market Reference (Baseload Price)
-        # The simple average of the hourly curve
+        # 1. Market reference price
+        # Baseload is approximated by the simple average of hourly prices
         market_baseload_price = hpfc.mean()
 
-        # 2. Client Capture Price (Volume Weighted Average Price)
-        # The actual price incurred to serve this specific profile
+        # 2. Client capture price
+        # Actual price paid given the specific consumption profile
         client_capture_price = (load_curve * hpfc).sum() / total_volume
 
-        # 3. Profiling Cost = Spread
-        # If Positive: Client consumes during expensive hours -> Pays a premium
-        # If Negative: Client consumes during cheap hours -> Gets a discount
+        # 3. Profiling cost (spread)
+        # Positive  -> consumption biased toward expensive hours
+        # Negative  -> consumption biased toward cheap hours
         profiling_cost = client_capture_price - market_baseload_price
-        
+
         return round(profiling_cost, 2)
 
+    # ------------------------------------------------------------------
+    # Volume (Swing) risk
+    # ------------------------------------------------------------------
     def calculate_volume_risk_premium(self, volume_mwh: float) -> float:
         """
-        Calculates the Volume Risk Premium (Swing Risk) in €/MWh.
-        
-        This covers the risk that the client consumes +/- 10% vs forecast,
-        forcing the supplier to trade on the volatile Spot market.
+        Computes the volume risk premium (€/MWh).
+
+        This premium compensates the supplier for volume uncertainty:
+        deviations vs forecast are typically balanced on the spot market,
+        where prices are volatile and asymmetric.
         """
-        
-        # 1. Base Risk (Balancing costs)
-        base_risk_premium = 1.0 # €/MWh fixed component
-        
-        # 2. Volatility Component
-        # Higher market volatility = Higher option cost
-        vol_component = 5.0 * self.spot_volatility 
-        
-        # 3. Size Factor (Small clients are statistically more volatile/less predictable)
+
+        # 1. Fixed base premium
+        # Covers standard balancing and operational costs
+        base_risk_premium = 1.0  # €/MWh
+
+        # 2. Volatility-driven component
+        # Higher spot volatility increases the cost of volume optionality
+        vol_component = 5.0 * self.spot_volatility
+
+        # 3. Size adjustment
+        # Smaller clients are statistically less predictable
         size_factor = 1.0
         if volume_mwh < 2000:
             size_factor = 1.5
         elif volume_mwh < 500:
-             size_factor = 2.0
-        
-        # Aggregated Premium
+            size_factor = 2.0
+
+        # Aggregate premium
         premium = (base_risk_premium + vol_component) * size_factor
-        
-        # Cap to avoid non-commercial prices
+
+        # Hard cap to keep prices commercially realistic
         return round(min(premium, 15.0), 2)

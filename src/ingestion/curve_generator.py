@@ -1,57 +1,128 @@
 import pandas as pd
 import numpy as np
-from src.core.settings import SETTINGS 
+from src.core.settings import SETTINGS
+from src.ingestion.elia_client import EliaDataConnector
+
 
 class LoadCurveGenerator:
     """
-    Generates synthetic hourly load profiles (consumption curves) for testing.
-    Simulates different B2B client typologies (Industry, Office, PPA).
+    Hybrid load curve generator.
+
+    Logic:
+    1. Attempt to retrieve real load data from Elia (Belgian grid).
+    2. Fall back to a synthetic profile if real data is unavailable.
+
+    Purpose: generate realistic hourly consumption or production profiles
+    suitable for pricing, risk, and sourcing analysis.
     """
 
     def __init__(self, year: int = 2026):
         self.year = year
-        # Create an hourly index for the full year
-        self.dates = pd.date_range(start=f"{year}-01-01", end=f"{year}-12-31 23:00", freq="h")
+
+        # Full hourly calendar for the target year
+        self.dates = pd.date_range(
+            start=f"{year}-01-01",
+            end=f"{year}-12-31 23:00",
+            freq="h",
+        )
         self.n_hours = len(self.dates)
 
-    def generate_profile(self, profile_type: str, annual_volume_mwh: float) -> pd.Series:
+        # Connector to Elia Open Data
+        self.elia = EliaDataConnector()
+
+    # ------------------------------------------------------------------
+    # Profile generation
+    # ------------------------------------------------------------------
+    def generate_profile(
+        self, profile_type: str, annual_volume_mwh: float
+    ) -> pd.Series:
         """
-        Creates a normalized load curve scaled to the target annual volume.
+        Generates an hourly load or production profile.
+
+        profile_type:
+        Defines the structural shape (industry, office, solar, etc.).
+
+        annual_volume_mwh:
+        Target annual energy volume used for normalization.
         """
-        base_curve = np.zeros(self.n_hours)
-        
-        # 1. Définition de la forme (shape)
+
+        # --------------------------------------------------------------
+        # Attempt to use real Elia data (only for 24/7 industrial profile)
+        # --------------------------------------------------------------
         if profile_type == "INDUSTRY_24_7":
-            # Usine: Consommation plate avec bruit
-            base_curve = np.random.normal(loc=1.0, scale=0.05, size=self.n_hours)
-            # Utilisation des settings pour le weekend (jours 5 et 6)
+            print("Attempting to retrieve real Elia load profile...")
+
+            # Use a short recent window as a representative shape
+            real_curve = self.elia.fetch_real_load_curve(days=14)
+
+            if not real_curve.empty:
+                # Convert to numpy array for tiling
+                pattern = real_curve.to_numpy()
+
+                # Repeat the short pattern to cover the full year
+                repeats = int((self.n_hours // len(pattern)) + 1)
+                full_pattern = np.tile(pattern, repeats)[: self.n_hours]
+
+                # Normalize to the requested annual volume
+                total_units = full_pattern.sum()
+                if total_units == 0:
+                    normalized_curve = np.zeros(self.n_hours)
+                else:
+                    normalized_curve = (
+                        full_pattern / total_units
+                    ) * annual_volume_mwh
+
+                print("Load profile generated using real Elia data.")
+                return pd.Series(
+                    normalized_curve,
+                    index=self.dates,
+                    name="Real Load (MWh)",
+                )
+
+        # --------------------------------------------------------------
+        # Fallback: synthetic profile generation
+        # --------------------------------------------------------------
+        print("Using synthetic load generator (fallback).")
+
+        base_curve = np.zeros(self.n_hours)
+
+        if profile_type == "INDUSTRY_24_7":
+            # Flat consumption with low noise and reduced weekends
+            base_curve = np.random.normal(1.0, 0.05, self.n_hours)
             is_weekend = self.dates.dayofweek.isin(SETTINGS.WEEKEND_DAYS)
-            base_curve[is_weekend] *= 0.85 # Légère baisse de production le weekend
+            base_curve[is_weekend] *= 0.85
 
         elif profile_type == "OFFICE_BUILDING":
-            # Tertiaire: 9h-18h en semaine, veille le reste
+            # Consumption concentrated on working hours
             hour = self.dates.hour
-            is_working_day = self.dates.dayofweek < 5
-            
-            # Utilisation des settings pour les heures Peak (8h-20h)
-            is_active_hour = (hour >= SETTINGS.PEAK_START_HOUR) & (hour < SETTINGS.PEAK_END_HOUR)
-            is_working = is_active_hour & is_working_day
-            
-            base_curve[is_working] = np.random.normal(1.0, 0.1, is_working.sum())
-            base_curve[~is_working] = np.random.normal(0.1, 0.05, (~is_working).sum())
+            is_working = (
+                (hour >= 8)
+                & (hour <= 18)
+                & (self.dates.dayofweek < 5)
+            )
+            base_curve[is_working] = np.random.normal(
+                1.0, 0.1, is_working.sum()
+            )
+            base_curve[~is_working] = 0.1
 
         elif profile_type == "SOLAR_PPA":
-            # Production Solaire: Courbe en cloche le jour
+            # Solar production profile (daylight only)
             hour = self.dates.hour
             daylight = (hour >= 6) & (hour <= 20)
-            base_curve[daylight] = np.sin((hour[daylight] - 6) * np.pi / 14) 
+            base_curve[daylight] = np.sin(
+                (hour[daylight] - 6) * np.pi / 14
+            )
             base_curve = np.maximum(base_curve, 0)
 
-        # 2. Normalisation au volume annuel cible
+        # Normalize synthetic curve to match annual volume
         total_units = base_curve.sum()
-        if total_units == 0:
-            return pd.Series(0.0, index=self.dates)
-            
-        normalized_curve = (base_curve / total_units) * annual_volume_mwh
-        
-        return pd.Series(normalized_curve, index=self.dates, name="Load (MWh)")
+        if total_units > 0:
+            normalized_curve = (base_curve / total_units) * annual_volume_mwh
+        else:
+            normalized_curve = base_curve
+
+        return pd.Series(
+            normalized_curve,
+            index=self.dates,
+            name="Synthetic Load",
+        )
