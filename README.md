@@ -234,14 +234,16 @@ Trading-terminal aesthetic (**Dark Mode**, **Neon Accents**) built with **Stream
 
 ---
 
+## Installation & Deployment
+
 ### Clone & Install
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/Voltage-Pricer.git
 cd Voltage-Pricer
 
-py -m pip install pandas numpy scipy streamlit plotly xlsxwriter openpyxl xgboost scikit-learn requests beautifulsoup4
-
+py -m pip install pandas numpy scipy streamlit plotly xlsxwriter openpyxl xgboost scikit-learn requests
+```
 ### Launch
 
 **API**
