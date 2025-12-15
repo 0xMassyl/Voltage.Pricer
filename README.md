@@ -107,7 +107,7 @@ graph TD
     Pricing --> Risk
     Risk --> UI
     UI --> Excel
-
+```
 
 ## 3. Quantitative Framework (The Math)
 
