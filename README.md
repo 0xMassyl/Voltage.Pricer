@@ -1,6 +1,6 @@
 # Voltage Pricer™ – Enterprise Energy Quoting Engine
 
-An industrial-grade pricing engine designed for B2B Power & Gas suppliers, bridging Wholesale Markets (EEX) and Retail Offers through stochastic modeling and advanced risk valuation.
+An industrial-grade pricing engine designed for B2B Power & Gas suppliers, bridging Wholesale Markets (EEX) and Retail Offers through stochastic modeling and advanced Machine Learning/A.I 
 
 ---
 
