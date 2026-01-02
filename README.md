@@ -1,6 +1,6 @@
 # Voltage Pricer – Enterprise Energy Pricing Engine
 
-An industrial-grade pricing engine designed for B2B Power & Gas suppliers, bridging Wholesale Markets (EEX) and Retail Offers through stochastic modeling and advanced Machine Learning/A.I 
+An industrial-grade pricing engine designed for B2B Power & Gas suppliers, bridging Wholesale Markets (EEX) and Retail Offers through **hybrid stochastic modeling and Machine Learning** grounded in real market data.
 
 <p align="center">
   <a href="assets/PLOT6.png">
@@ -20,8 +20,7 @@ An industrial-grade pricing engine designed for B2B Power & Gas suppliers, bridg
   </a>
 </p>
 
-
-
+---
 
 ## Table of Contents
 
@@ -47,22 +46,24 @@ An industrial-grade pricing engine designed for B2B Power & Gas suppliers, bridg
 
 ## 1. Executive Summary
 
-**Voltage Pricer** is a Python-based valuation engine simulating the workflow of a Pricing Analyst at a major utility (e.g., TotalEnergies, Engie). Unlike simple arithmetic calculators, it implements a **bottom-up approach** to energy pricing:
+**Voltage Pricer** is a Python-based valuation engine simulating the workflow of a Pricing Analyst at a major utility (e.g., TotalEnergies, Engie). Unlike simple arithmetic calculators, it implements a **bottom-up approach** to energy pricing, combining **market theory and observed reality**:
 
-- **Real-Time Grid Integration**  
-  Connects to the ELIA (Belgian TSO) Open Data API to ingest real-time load curves and spot prices, ensuring the pricing is grounded in physical reality.
+- **Real-Time Grid & Market Integration**  
+  Connects to the ELIA (Belgian TSO) Open Data API to ingest historical spot prices and grid signals, ensuring the pricing logic is grounded in real-world market behavior.
 
-- **AI-Driven Seasonality**  
-  Utilizes a Gradient Boosting Regressor (XGBoost) trained on 25 years of synthetic history to forecast hourly price shapes (HPFC) for future delivery years (Cal-26).
+- **Hybrid AI-Driven Seasonality**  
+  Utilizes a Gradient Boosting Regressor (XGBoost) trained on a **hybrid historical dataset**:
+  - Long-term synthetic data (2000–2014) to stabilize structural seasonality.
+  - Real ELIA spot prices (2015–present) to capture modern volatility, negative prices, and crisis regimes.
 
 - **Risk Quantification**  
-  Explicitly computes the Profiling Cost (Shape Risk) and Volume Swing Risk to protect the supplier's margin against consumption volatility.
+  Explicitly computes Profiling Cost (Shape Risk) and Volume Swing Risk to protect supplier margins against consumption uncertainty.
 
 ---
 
 ## 2. System Architecture
 
-The project adopts a **Hexagonal Architecture (Ports & Adapters)** to decouple the business logic (Pricing / Risk) from the infrastructure (API / UI / Data Sources).
+The project adopts a **Hexagonal Architecture (Ports & Adapters)** to decouple business logic (Pricing / Risk) from infrastructure concerns (API / UI / Data Sources).
 
 ---
 
@@ -71,16 +72,16 @@ The project adopts a **Hexagonal Architecture (Ports & Adapters)** to decouple t
 The application is containerized and split into modular components:
 
 - **Ingestion Service**  
-  Handles external API calls (ELIA) and data normalization.
+  Handles external API calls (ELIA), data normalization, and resilience fallback.
 
 - **Forecasting Service**  
-  Manages the XGBoost model lifecycle (training / inference).
+  Manages the full lifecycle of the XGBoost model (hybrid training, inference, calibration).
 
 - **Pricing Core**  
-  Pure Python implementation of the valuation formulas.
+  Pure Python implementation of sourcing, profiling, and risk valuation formulas.
 
 - **Presentation Layer**  
-  Streamlit dashboard acting as the B2B Sales Front-end.
+  Streamlit dashboard acting as the B2B Sales and Structuring front-end.
 
 ---
 
@@ -95,7 +96,7 @@ graph TD
 
     subgraph Ingestion_Layer
         Loader["Data Loader & Cleaning"]
-        Generator["Curve Generator"]
+        Generator["Hybrid History Generator"]
     end
 
     subgraph Intelligence_Layer
@@ -132,20 +133,28 @@ graph TD
 
 ### 3.1 Machine Learning Forecasting (XGBoost)
 
-The model predicts the **hourly price shape** based on temporal features.
+The model predicts the **hourly price shape** using time-based explanatory variables and a **hybrid learning strategy**.
 
 - **Objective**: Minimize RMSE on historical hourly prices  
+
 - **Features**:  
-  `Hour`, `DayOfWeek`, `Month`, `IsWeekend`, `IsPeak`
-- **Algorithm**: Gradient Boosting Trees  
-  - 200 estimators  
-  - `max_depth = 7`
+  `Hour`, `DayOfWeek`, `Month`, `DayOfYear`, `IsWeekend`, `IsPeak`
+
+- **Algorithm**: Gradient Boosting Trees (XGBoost)  
+  - 300 estimators  
+  - `max_depth = 8`  
+  - Low learning rate for stability  
+
+The hybrid dataset allows the model to learn:
+
+- **Structural seasonality** from long-term synthetic history  
+- **Real volatility regimes** from observed ELIA spot prices  
 
 ---
 
 ### 3.2 Hourly Price Forward Curve (HPFC)
 
-The Hourly Price Forward Curve aligns the ML-generated hourly shape with the market forward level.
+The Hourly Price Forward Curve aligns the ML-generated hourly structure with a market forward level.
 
 $$
 HPFC_t = \hat{P}_t^{ML} + \left( P_{Market}^{Forward} - \mu\left(\hat{P}^{ML}\right) \right)
@@ -157,19 +166,26 @@ Where:
 - $P_{Market}^{Forward}$ is the Cal forward baseload price  
 - $\mu(\cdot)$ is the mean of the ML-generated curve  
 
+This preserves the **shape learned from real market history** while matching the commercial forward price.
+
 ---
 
 ### 3.3 Profiling Cost Valuation
 
-The profiling cost measures **shape risk**, i.e. the tendency to consume more electricity during structurally high-price hours.
+The profiling cost measures **shape risk**, i.e. the tendency to consume more electricity during structurally expensive hours.
 
 $$
 Cost_{Profiling}
-=\left(\frac{\sum_{t=1}^{8760} Load_t \times HPFC_t}{\sum_{t=1}^{8760} Load_t}\right)-\bar{P}_{Base}
+=
+\left(
+\frac{\sum_{t=1}^{8760} Load_t \times HPFC_t}
+{\sum_{t=1}^{8760} Load_t}
+\right)
+-
+\bar{P}_{Base}
 $$
 
 A positive value indicates a consumption profile more expensive than the flat baseload hedge.
-
 
 ---
 
@@ -183,20 +199,20 @@ $$
 
 Where:
 
-- $\sigma_{spot}$ is spot price volatility  
+- $\sigma_{spot}$ is spot price volatility estimated from historical ELIA prices  
 - $V$ is annual client volume  
 
 ---
 
 ### 3.5 Renewable PPA Cannibalization
 
-For renewable PPAs (Solar / Wind), the fixed price is discounted to reflect capture effects.
+For renewable PPAs (Solar / Wind), the fixed price is discounted to reflect capture effects and market correlation.
 
 $$
 P_{PPA} = (P_{Base} \times CR) - RiskBuffer
 $$
 
-This accounts for production/price correlation and cannibalization during high renewable output periods.
+This accounts for price cannibalization during periods of high renewable output.
 
 ---
 
@@ -207,17 +223,18 @@ This accounts for production/price correlation and cannibalization during high r
 **File:** `src/ingestion/elia_client.py`
 
 - Robust connector to `opendata.elia.be`  
-- Smart fallback with synthetic, grid-consistent data in case of API failure  
+- Retrieval of historical spot prices  
+- Smart fallback using grid-consistent synthetic data in case of API failure  
 
 ---
 
 ### 4.2 Domain Logic Layer
 
-**File:** `src/domain/pricing_models.py`
+**File:** `src/domain/ml_forecasting.py`
 
-- Load → cost orchestration  
-- Dynamic ML retraining when HPFC is missing  
-- Strict Python typing (validated by Pylance)
+- Hybrid dataset construction (synthetic + real)  
+- Automated model training and validation  
+- Strict Python typing (validated by Pylance)  
 
 ---
 
@@ -237,7 +254,7 @@ Trading-terminal aesthetic (**Dark Mode**, **Neon Accents**) built with **Stream
 
 - Load vs Price dual-axis chart  
 - Seasonal heatmap (Hour × Month)  
-- ML diagnostics (Train / Test RMSE)
+- ML diagnostics (Train / Test RMSE, overfitting ratio)
 
 ---
 
@@ -259,14 +276,15 @@ cd Voltage-Pricer
 py -m pip install pandas numpy scipy streamlit plotly xlsxwriter openpyxl xgboost scikit-learn requests
 ```
 
-### Launch
-
+### Launch API
 
 ```bash
 py -m uvicorn src.engine.api_server:app --reload --port 8000
+
 ```
 
-### UI
+### Launch UI
+
 
 ```bash
 py -m streamlit run app.py
@@ -294,3 +312,11 @@ Voltage-Pricer/                     # Project root
 ├── app.py                          # Streamlit UI entrypoint
 ├── pyproject.toml                  # Dependency management
 └── README.md                       # Project documentation
+```
+
+## License
+
+MIT License
+
+Copyright (c) 2026
+
