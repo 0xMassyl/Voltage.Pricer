@@ -2,22 +2,24 @@
 
 An industrial-grade pricing engine designed for B2B Power & Gas suppliers, bridging Wholesale Markets (EEX) and Retail Offers through stochastic modeling and advanced Machine Learning/A.I 
 
----
-
-<!-- Preview Images -->
-
 <p align="center">
-  <img src="assets/PLOT6.png" width="60%" />
-  <img src="assets/PLOT2.png" width="38%" />
+  <a href="assets/PLOT6.png">
+    <img src="assets/PLOT6.png" width="100%" />
+  </a>
 </p>
 
 <p align="center">
-  <img src="assets/PLOT8.png" width="60%" />
-  <img src="assets/PLOT7.png" width="38%" />
+  <a href="assets/PLOT7.png">
+    <img src="assets/PLOT7.png" width="100%" />
+  </a>
 </p>
 
+<p align="center">
+  <a href="assets/PLOT8.png">
+    <img src="assets/PLOT8.png" width="100%" />
+  </a>
+</p>
 
----
 
 
 

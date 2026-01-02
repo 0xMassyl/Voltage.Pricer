@@ -24,6 +24,51 @@ st.set_page_config(
     page_icon="⚡",
     initial_sidebar_state="expanded"
 )
+# ---------------------------------------------------------------------------
+# SIDEBAR TOGGLE — FIXED BUTTON, NO LAYOUT SHIFT
+# ---------------------------------------------------------------------------
+if "sidebar_hidden" not in st.session_state:
+    st.session_state.sidebar_hidden = False
+
+sb = st.query_params.get("sb", None)
+if sb is not None:
+    st.session_state.sidebar_hidden = (str(sb) == "1")
+
+next_sb = "0" if st.session_state.sidebar_hidden else "1"
+
+st.markdown(
+    f"""
+    <style>
+      .sidebar-toggle {{
+          position: fixed;
+          top: 10px;
+          left: 10px;
+          z-index: 99999;
+      }}
+      .sidebar-toggle a {{
+          background: #262730;
+          color: white;
+          text-decoration: none;
+          border: 1px solid #444;
+          padding: 6px 10px;
+          border-radius: 6px;
+          font-size: 16px;
+      }}
+
+      section[data-testid="stSidebar"] {{
+          opacity: {"0" if st.session_state.sidebar_hidden else "1"};
+          visibility: {"hidden" if st.session_state.sidebar_hidden else "visible"};
+          pointer-events: {"none" if st.session_state.sidebar_hidden else "auto"};
+          transition: opacity 0.15s ease;
+      }}
+    </style>
+
+    <div class="sidebar-toggle">
+        <a href="?sb={next_sb}" title="Afficher / cacher la sidebar">☰</a>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # -----------------------------------------------------------------------------
 # 2. NEON DESIGN SYSTEM 
@@ -109,8 +154,32 @@ st.markdown("""
         .js-plotly-plot .plotly .main-svg {
             background: rgba(0,0,0,0) !important;
         }
+        
+        .sidebar-toggle {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 9999;
+    }
+    .sidebar-toggle button {
+        background: #262730;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+    }
     </style>
-""", unsafe_allow_html=True)
+
+    <div class="sidebar-toggle">
+        <form>
+            <button name="toggle">☰</button>
+        </form>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # -----------------------------------------------------------------------------
 # 3. HEADER
@@ -435,4 +504,4 @@ else:
     # État initial
     st.markdown("<div style='text-align: center; color: #333; margin-top: 50px; font-family:\"Segoe UI\", sans-serif;'>WAITING FOR INPUT...</div>", unsafe_allow_html=True)
     
-    
+
