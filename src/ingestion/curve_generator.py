@@ -174,3 +174,7 @@ class LoadCurveGenerator:
             index=self.dates,
             name="Synthetic Load",
         )
+        
+        
+        
+        
