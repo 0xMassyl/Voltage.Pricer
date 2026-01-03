@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from src.core.settings import SETTINGS
-from src.ingestion.elia_client import EliaDataConnector
+from src.ingestion._1API_connector import EliaDataConnector
 
 
 class LoadCurveGenerator:

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Dict
 
 # ML forecasting engine used to generate the hourly price shape
-from src.domain.ml_forecasting import MLPriceForecaster
+from src.domain._3hpfc_forecasting import MLPriceForecaster
 
 
 @dataclass

@@ -7,11 +7,11 @@ from plotly.subplots import make_subplots
 import io
 
 # Imports des modules internes
-from src.ingestion.curve_generator import LoadCurveGenerator
-from src.ingestion.market_data import MarketDataManager
-from src.domain.pricing_models import ElectricityPricingEngine
-from src.domain.risk_models import RiskEngine
-from src.domain.ppa_valuation import price_renewable_ppa
+from src.ingestion._4client_load_profiling import LoadCurveGenerator
+from src.ingestion._2data_calibration import MarketDataManager
+from src.domain._5fusion_price import ElectricityPricingEngine
+from src.domain._6final_profiling_price import RiskEngine
+from src.domain._optional_ppa_valuation import price_renewable_ppa
 from src.core.settings import SETTINGS
 from src.reporting.excel_export import export_pricing_to_excel
 
