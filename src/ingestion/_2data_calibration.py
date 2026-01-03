@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from typing import Dict, Any
-from src.ingestion.API_connector import EliaDataConnector
+from src.ingestion._1API_connector import EliaDataConnector
 
 
 class MarketDataManager:

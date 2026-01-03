@@ -1,4 +1,4 @@
-from src.ingestion.elia_client import EliaDataConnector
+from src.ingestion._1API_connector import EliaDataConnector
 import pandas as pd
 
 

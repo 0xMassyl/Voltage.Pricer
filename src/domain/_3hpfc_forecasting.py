@@ -9,11 +9,11 @@ import os
 
 # Gestion des imports pour le mode script vs module
 try:
-    from src.ingestion.elia_client import EliaDataConnector
+    from src.ingestion._1API_connector import EliaDataConnector
 except ImportError:
     # Fallback pour exécution directe du fichier
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-    from src.ingestion.elia_client import EliaDataConnector
+    from src.ingestion._1API_connector import EliaDataConnector
 
 class MLPriceForecaster:
     """
