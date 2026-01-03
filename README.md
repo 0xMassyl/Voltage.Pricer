@@ -213,7 +213,7 @@
 
   ### 4.1 Data Ingestion Layer
 
-  **File:** `src/ingestion/elia_client.py`
+  **File:** `src/ingestion/_1API_connector.py`
 
   - Robust connector to `opendata.elia.be`  
   - Retrieval of historical spot prices  
@@ -223,7 +223,7 @@
 
   ### 4.2 Domain Logic Layer
 
-  **File:** `src/domain/ml_forecasting.py`
+  **File:** `src/domain/_3hpfc_forecasting.py`
 
   - Hybrid dataset construction (synthetic + real)  
   - Automated model training and validation  
@@ -292,14 +292,14 @@
   │   ├── core/                       # Global configuration
   │   │   └── settings.py             # Market rules & constants
   │   ├── domain/                     # Business logic layer
-  │   │   ├── pricing_models.py       # Sourcing & pricing logic
-  │   │   ├── risk_models.py          # Profiling & volume risk
-  │   │   ├── ppa_valuation.py        # Renewable PPA pricing
-  │   │   └── ml_forecasting.py       # XGBoost forecasting engine
+  │   │   ├── _5fusion_price.py       # Sourcing & pricing logic
+  │   │   ├── _6final_profiling_price # Profiling & volume risk
+  │   │   ├── _optional_ppa_valuation # Renewable PPA pricing
+  │   │   └── _3hpfc_forecasting.py   # XGBoost forecasting engine
   │   ├── ingestion/                  # Data ingestion layer
-  │   │   ├── curve_generator.py      # Load profile generation
-  │   │   ├── market_data.py          # Market price feeds
-  │   │   └── elia_client.py          # TSO API connector
+  │   │   ├── _4client_load_profiling # Load profile generation
+  │   │   ├── _2data_calibration      # Market price feeds
+  │   │   └── _1API_connector         # TSO API connector
   │   └── reporting/                  # Output & reporting
   │       └── excel_export.py         # Excel quote generation
   ├── app.py                          # Streamlit UI entrypoint
